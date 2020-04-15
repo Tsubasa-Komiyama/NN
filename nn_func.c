@@ -1,4 +1,4 @@
-#include "Func.h"
+#include "nn_func.h"
 #include "parameter.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,12 +6,12 @@
 #include <math.h>
 
 //シグモイド関数
-double *Sigmoid(double *array, int size, int flag, double *matrix)
+double *Sigmoid(double *array, int size, int flag, double **matrix)
 {
     double *out = NULL; //出力する配列
 
     //動的メモリ確保
-    if((out = (double*)malloc((size + 1) * sizeof(double))) = NULL){
+    if((out = (double*)malloc((size + 1) * sizeof(double))) == NULL){
         return NULL;
     }
 
@@ -94,7 +94,7 @@ double Mean_Square_Error(double *y, double *t, int size, int flag, double *dE_dy
     //逆伝搬時，微分を計算
     if(flag){
         for(int i = 1; i <= size; i++){
-            dE_dy[i] = 2.0 * (y[i] - t[i]) / double(size);
+            dE_dy[i] = 2.0 * (y[i] - t[i]) / size;
         }
 
         return 0.0;
@@ -111,7 +111,7 @@ double Mean_Square_Error(double *y, double *t, int size, int flag, double *dE_dy
 
 
 //順伝搬
-void forward(NN_PARAM nn_param)
+void forward(NN_PARAM nn_param, double *data)
 {
     int i, j, k;     //制御変数
     double tmp;     //
@@ -122,7 +122,7 @@ void forward(NN_PARAM nn_param)
     //中間層
     for(i = 0; i < nn_param.hidden_layer_size; i++){
         int prev_layer_size = size[i];
-        int curr_layer_size = size[i+1]:
+        int curr_layer_size = size[i+1];
 
         for(j = 1; j <= curr_layer_size; j++){
             tmp = w[i][0][j];   //バイアス
@@ -136,7 +136,7 @@ void forward(NN_PARAM nn_param)
 
         free(layer_out[i+1]);
 
-        later_out[i+1] = nn_param.act[i+1](layer_in[i+1], size[i+1], 0, NULL);
+        layer_out[i+1] = nn_param.act[i+1](layer_in[i+1], size[i+1], 0, NULL);
     }
 
     //出力層
@@ -168,7 +168,7 @@ void backward(NN_PARAM nn_param)
     double tmp;
 
     //dE_dyの初期化
-    if((dE_dy = (double*)malloc((nn_param.output_layer_size + 1) * sizeof(double))) = NULL){
+    if((dE_dy = (double*)malloc((nn_param.output_layer_size + 1) * sizeof(double))) == NULL){
         exit(-1);
     }
     for(i = 0; i <= nn_param.output_layer_size; i++){
@@ -179,12 +179,12 @@ void backward(NN_PARAM nn_param)
     nn_param.loss(out, t, nn_param.output_layer_size, 1, dE_dy);
 
     //dy_daを初期化，メモリ確保
-    if((dy_da = (double**)malloc((nn_param.output_layer_size + 1) * sizeof(double*))) = NULL){
+    if((dy_da = (double**)malloc((nn_param.output_layer_size + 1) * sizeof(double*))) == NULL){
         exit(-1);
     }
 
     for(i = 1; i <= nn_param.output_layer_size; i++){
-        if((dy_da[i] = (double*)malloc((nn_param.output_layer_size + 1) * sizeof(double))) = NULL){
+        if((dy_da[i] = (double*)malloc((nn_param.output_layer_size + 1) * sizeof(double))) == NULL){
             exit(-1);
         }
     }
@@ -224,6 +224,21 @@ void backward(NN_PARAM nn_param)
 
             for(k = 0; k <= next_layer_size; k++){
                 dE_dw[i][j][k] = z * dE_da[i+1][k];
+            }
+        }
+
+        //dz_daの初期化
+        if((dz_da = (double**)malloc((curr_layer_size + 1) * sizeof(double*))) == NULL){
+            exit(-1);
+        }
+
+        for(j = 0; j <= curr_layer_size; j++){
+            if((dz_da[j] = (double*)malloc((curr_layer_size + 1) * sizeof(double))) == NULL){
+                exit(-1);
+            }
+
+            for(k = 0; k <= curr_layer_size; k++){
+                dz_da[j][k] = 0.0;
             }
         }
 
@@ -281,13 +296,22 @@ void update_w(NN_PARAM nn_param, double epsilon)
 //変数の設定
 void set_variables(NN_PARAM nn_param)
 {
-    if((data = (double*)malloc((nn_param.input_layer_size + 1) * sizeof(double))) == NULL) {
+    int i, j, k;
+
+    //data
+    if((data = (double**)malloc((nn_param.input_layer_size + 1) * sizeof(double*))) == NULL) {
         exit(-1);
+    }
+
+    for(i = 1; i <= nn_param.input_layer_size; i++){
+        if((data[i] = (double*)malloc((nn_param.input_layer_size + 1) * sizeof(double))) == NULL){
+            exit(-1);
+        }
     }
 
     //size
     nn_param.num_unit[0] = nn_param.input_layer_size;
-    size = nn_param.N_unit;
+    size = nn_param.num_unit;
 
     //w
     if((w = (double***)malloc((nn_param.hidden_layer_size + 1) * sizeof(double**))) == NULL) {
@@ -297,20 +321,17 @@ void set_variables(NN_PARAM nn_param)
     srand((unsigned int)time(NULL));
 
     for(i = 0; i <= nn_param.hidden_layer_size; i++) {
-        int curr_layer_size = size[i];
-        int next_layer_size = size[i + 1];
-
-        if((w[i] = (double**)malloc((d_max + 1) * sizeof(double*))) == NULL) {
+        if((w[i] = (double**)malloc((size[i] + 1) * sizeof(double*))) == NULL) {
             exit(-1);
         }
 
-        for(i = 0; i <= curr_layer_size; i++) {
-            if((w[l][i] = (double*)malloc((next_layer_size + 1) * sizeof(double))) == NULL) {
+        for(j = 0; j <= size[i]; j++) {
+            if((w[i][j] = (double*)malloc((size[i+1] + 1) * sizeof(double))) == NULL) {
                 exit(-1);
             }
 
-            for(j = 0; j <= d_next_layer; j++) {
-                w[l][i][j] = ((double)rand()/RAND_MAX) * 2 - 1;  //乱数でaを初期化
+            for(k = 0; k <= size[i+1]; k++) {
+                w[i][j][k] = ((double)rand()/RAND_MAX) * 2 - 1;  //乱数でaを初期化
             }
         }
     }
@@ -347,29 +368,29 @@ void set_variables(NN_PARAM nn_param)
         }
     }
 
-    if((layer_in[nn_param.hidden_layer_size + 1] = (double*)malloc((nn_param.out_layer_size + 1) * sizeof(double))) == NULL) {
+    if((layer_in[nn_param.hidden_layer_size + 1] = (double*)malloc((nn_param.output_layer_size + 1) * sizeof(double))) == NULL) {
         exit(-1);
     }
 
-    for(i = 0; i <= nn_param.out_layer_size; i++) {
-        layer_in[nn_param.out_layer_size + 1][i] = 0.0;
+    for(i = 0; i <= nn_param.output_layer_size; i++) {
+        layer_in[nn_param.output_layer_size + 1][i] = 0.0;
     }
 
     //out
-    if((out = (double*)malloc((nn_param.out_layer_size + 1) * sizeof(double))) == NULL) {
+    if((out = (double*)malloc((nn_param.output_layer_size + 1) * sizeof(double))) == NULL) {
         exit(-1);
     }
 
-    for(i = 0; i <= nn_param.out_layer_size; i++) {
+    for(i = 0; i <= nn_param.output_layer_size; i++) {
         out[i] = 0.0;
     }
 
-    // Setup t
-    if((t = (double*)malloc((nn_param.out_layer_size + 1) * sizeof(double))) == NULL) {
+    //t
+    if((t = (double*)malloc((nn_param.output_layer_size + 1) * sizeof(double))) == NULL) {
         exit(-1);
     }
 
-    for(i = 0; i <= nn_param.out_layer_size; i++) {
+    for(i = 0; i <= nn_param.output_layer_size; i++) {
         t[i] = 0.0;
     }
 
@@ -410,11 +431,11 @@ void set_variables(NN_PARAM nn_param)
         }
     }
 
-    if((dE_da[nn_param.hidden_layer_size + 1] = (double*)malloc((nn_param.out_layer_size + 1) * sizeof(double))) == NULL) {
+    if((dE_da[nn_param.hidden_layer_size + 1] = (double*)malloc((nn_param.output_layer_size + 1) * sizeof(double))) == NULL) {
         exit(-1);
     }
 
-    for(i = 0; i <= nn_param.out_layer_size; i++) {
+    for(i = 0; i <= nn_param.output_layer_size; i++) {
         dE_da[nn_param.hidden_layer_size + 1][i] = 0.0;
     }
 }

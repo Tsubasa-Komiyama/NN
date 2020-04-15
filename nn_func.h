@@ -1,7 +1,8 @@
-#ifndef __INC_FUNC_H
-#define __INC_FUNC_H
+#ifndef __INC_NN_FUNC_H
+#define __INC_NN_FUNC_H
 
 #include <stdio.h>
+#include "parameter.h"
 
 /*!----------------------------------------------------------------------------
  @brif シグモイド関数
@@ -10,7 +11,7 @@
  @param [in] array(double*) シグモイド関数を適応させるデータ
  @param [in] size(int) arrayのサイズ
  @param [in] flag(int) 順伝搬か逆伝搬かを判別するための変数
- @param [in, out] matrix(double*) シグモイド関数の微分を格納
+ @param [in, out] matrix(double**) シグモイド関数の微分を格納
  @return double シグモイド関数を適応した入力（0~1)
  @attention
  @par 更新履歴
@@ -20,7 +21,7 @@
      -仕様および処理を変更 (by Tsubasa Komiyama)
 */
 
-double* Sigmoid(double* array, int size);
+double* Sigmoid(double* array, int size, int flag, double **matrix);
 
 /*!----------------------------------------------------------------------------
  @brif ソフトマックス関数
@@ -64,6 +65,7 @@ double Mean_Square_Error(double* y, double* t, int size, int flag, double* dE_dy
 
   順伝搬における入力層，中間層，出力層での処理を定義
  @param [in] nn_param(NN_PARAM) NN_PARAM構造体のデータ
+ @param [in] data(double*) 入力するデータ
  @return なし
  @attention
  @par 更新履歴
@@ -71,7 +73,7 @@ double Mean_Square_Error(double* y, double* t, int size, int flag, double* dE_dy
      -基本的な機能の実装 (by Tsubasa Komiyama)
 */
 
-void forward(NN_PARAM nn_param);
+void forward(NN_PARAM nn_param, double *data);
 
 /*!----------------------------------------------------------------------------
  @brif 逆伝搬の処理を行う関数
