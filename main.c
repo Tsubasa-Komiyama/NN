@@ -6,8 +6,7 @@
 #define N 100     //試行回数の最大値
 
 int main(void){
-    int i, j;  //制御変数
-    int train_num;  //訓練データの数
+    int i;  //制御変数
     NN_PARAM nn_param;
     double unit_N;
     FILE *fp;
@@ -56,25 +55,17 @@ int main(void){
     i = 0;
 	while (fgetc(fp) != '\n' && !feof(fp));
     while(fscanf(fp, "%lf %lf %lf %lf", &data[i][0], &data[i][1], &data[i][2], &t[i]) == EOF){
-        i++;
-    }
+        forward(nn_param, data[i]);
 
-    train_num = i;
+        Loss = nn_param.loss(out, t, nn_param.output_layer_size, 0, NULL);
+
+        printf("%d : %lf\n", i, Loss);
+
+        backward(nn_param);
+        update_w(nn_param, epsilon);
+    }
 
     fclose(fp);
-
-    for(i = 0; i < N; i++){
-        for(j = 0; j < train_num; j++){
-            forward(nn_param, data[i]);
-
-            Loss = nn_param.loss(out, t, nn_param.output_layer_size, 0, NULL);
-
-            printf("%d : %lf\n", i, Loss);
-
-            backward(nn_param);
-            update_w(nn_param, epsilon);
-        }
-    }
 
     return 0;
 }
