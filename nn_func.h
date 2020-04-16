@@ -71,9 +71,11 @@ double Mean_Square_Error(double* y, double* t, int size, int flag, double* dE_dy
  @par 更新履歴
    - 2020/4/15
      -基本的な機能の実装 (by Tsubasa Komiyama)
+   - 2020/4/16
+     -引数の変更
 */
 
-void forward(NN_PARAM nn_param, double *data);
+void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **layer_in, double **layer_out, double *out);
 
 /*!----------------------------------------------------------------------------
  @brif 逆伝搬の処理を行う関数
@@ -85,9 +87,11 @@ void forward(NN_PARAM nn_param, double *data);
  @par 更新履歴
    - 2020/4/15
      -基本的な機能の実装 (by Tsubasa Komiyama)
+   - 2020/4/16
+     -引数の変更
 */
 
-void backward(NN_PARAM nn_param);
+void backward(NN_PARAM nn_param, double ***w, int *size, double **layer_in, double **layer_out, double *out, double *t, double ***dE_dw, double ***dE_dw_t, double **dE_da);
 
 /*!----------------------------------------------------------------------------
  @brif 重みの更新を行う関数
@@ -95,6 +99,9 @@ void backward(NN_PARAM nn_param);
   逆伝搬の結果から重みを更新する
  @param [in] nn_param(NN_PARAM) NN_PARAM構造体のデータ
  @param [in] epsilon(double) 学習率
+ @param [in] w(double***) 重み
+ @param [in] size(int*) 学習率
+ @param [in] dE_dw_t(double***) dE_dwの合計
  @return なし
  @attention
  @par 更新履歴
@@ -102,21 +109,40 @@ void backward(NN_PARAM nn_param);
      -基本的な機能の実装 (by Tsubasa Komiyama)
 */
 
-void update_w(NN_PARAM nn_param, double epsilon);
+void update_w(NN_PARAM nn_param, double epsilon, double ***w, int *size, double ***dE_dw_t);
 
 /*!----------------------------------------------------------------------------
- @brif 変数の初期化を行う関数
+ @brif 重みの更新を行う関数
 
-  変数のメモリ確保を行う
+  全部の教師データの損失から重みを更新する
  @param [in] nn_param(NN_PARAM) NN_PARAM構造体のデータ
+ @param [in] epsilon(double) 学習率
+ @param [in] w(double***) 重み
+ @param [in] size(int*) 学習率
+ @param [in] dE_dw_t(double***) dE_dwの合計
+ @param [in] batch_size(int) データ数
  @return なし
+ @attention
+ @par 更新履歴
+   - 2020/4/16
+     -基本的な機能の実装 (by Tsubasa Komiyama)
+*/
+
+void batch_update_w(NN_PARAM nn_param, double epsilon, double ***w, int *size, double ***dE_dw_t, int batch_size);
+
+/*!----------------------------------------------------------------------------
+ @brif 構造体NN_PARAMの初期化を行う関数
+
+  NN_PARAMのメモリ確保，初期化を行う
+ @param [in] nn_param(NN_PARAM) NN_PARAM構造体のデータ
+ @return NN_PARAM
  @attention
  @par 更新履歴
    - 2020/4/15
      -基本的な機能の実装 (by Tsubasa Komiyama)
 */
 
-void set_variables(NN_PARAM nn_param);
+NN_PARAM set_param(NN_PARAM nn_param);
 
 
 
