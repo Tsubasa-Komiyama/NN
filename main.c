@@ -13,7 +13,6 @@
 int main(void){
     int i, j, k;        //制御変数
     int key;  //対話用選択肢
-    int train_num;      //訓練データの数
     NN_PARAM nn_param;  //構造体
     double unit_N;      //素子数
     FILE *fp;
@@ -250,11 +249,10 @@ int main(void){
 	//データ読み込み
     printf("教師データ\n");
     i = 0;
-	while ((fscanf(fp, "%lf %lf %lf %lf", &train_data[i][0], &train_data[i][1], &train_data[i][2], &t[i][0])) != EOF) {
-		printf("%.1lf %.1lf %.1lf %.1lf\n", train_data[i][0], train_data[i][1], train_data[i][2], t[i][0]);
+	while ((fscanf(fp, "%lf %lf %lf %lf", &train_data[i][1], &train_data[i][2], &train_data[i][3], &t[i][1])) != EOF) {
+		printf("%.1lf %.1lf %.1lf %.1lf\n", train_data[i][1], train_data[i][2], train_data[i][3], t[i][1]);
 		i++;
 	}
-    train_num = i;
     fclose(fp);
 
     //未学習データ
@@ -266,8 +264,8 @@ int main(void){
 	//データ読み込み
     printf("未学習データ\n");
     i = 0;
-	while ((fscanf(fp, "%lf %lf %lf", &unlearn_data[i][0], &unlearn_data[i][1], &unlearn_data[i][2])) != EOF) {
-		printf("%.1lf %.1lf %.1lf\n", unlearn_data[i][0], unlearn_data[i][1], unlearn_data[i][2]);
+	while ((fscanf(fp, "%lf %lf %lf", &unlearn_data[i][1], &unlearn_data[i][2], &unlearn_data[i][3])) != EOF) {
+		printf("%.1lf %.1lf %.1lf\n", unlearn_data[i][1], unlearn_data[i][2], unlearn_data[i][3]);
 		i++;
 	}
     fclose(fp);
@@ -293,31 +291,41 @@ int main(void){
 
       switch (key) {
         case 'a':
+        /**************************一括学習*************************************/
+        printf("一括学習の処理を始めます．\n");
+        batch_count = 0;    //カウントの初期化
         do{
-            batch_count = 0;
-
             //教師データについて一つずつ順伝搬・逆伝搬を行い，重みの更新はエポックごとに行う
             Loss_batch = 0.0;
-            for(i = 0; i < nn_param.input_layer_size; i++){
+            for(i = 0; i < data_num; i++){
                 //順伝搬
                 forward(nn_param, train_data[i], w, size, layer_in, layer_out, out[i]);
-                Loss_batch += nn_param.loss(out[i], t[i], nn_param.output_layer_size, 0, NULL) / train_num;
+                Loss_batch += nn_param.loss(out[i], t[i], nn_param.output_layer_size, 0, NULL) / data_num;
+                printf("i = %d : %lf\n", i, Loss_batch);
                 //逆伝搬
                 backward(nn_param, w, size, layer_in, layer_out, out[i], t[i], dE_dw, dE_dw_t, dE_da);
             }
 
             //重みの更新
-            batch_update_w(nn_param, epsilon, w, size, dE_dw_t, train_num);
+            batch_update_w(nn_param, epsilon, w, size, dE_dw_t, data_num);
 
             //カウント
             batch_count++;
 
-            printf("%d : %lf\n", batch_count, Loss_batch);
+            printf("batch_count = %d : %lf\n", batch_count, Loss_batch);
         }while(abs(Loss_batch) > LOSS_MIN && batch_count < N);
 
           if(abs(Loss_batch) < LOSS_MIN){
             printf("勾配の大きさが一定値を下回りました。\n");
-            //printf("パラメータの値は%.4lf\n", a);
+            printf("損失の大きさ : %lf\n", Loss_batch);
+            /*
+            for(i = 0; i <= nn_param.hidden_layer_size; i++) {
+                for(j = 0; j <= size[i]; j++) {
+                    for(k = 0; k <= size[i+1]; k++) {
+                        printf("w[%d][%d][%d] = %lf\n", i, j, k, w[i][j][k]);
+                    }
+                }
+            }*/
             printf("繰り返し回数は%d\n", batch_count);
         }else if(seq_count > N){
             printf("繰り返し回数が一定数を超えました。\n");
@@ -331,28 +339,41 @@ int main(void){
           break;
 
         case 'b':
+        /**************************逐次学習*************************************/
+        printf("逐次学習の処理を始めます．\n");
+        seq_count = 0;  //カウントの初期化
         do{
-            seq_count = 0;
-
             //教師データについて一つずつ順伝搬・逆伝搬・重みの更新を行う
-            for(i = 0; i < nn_param.input_layer_size; i++){
+            for(i = 0; i < data_num; i++){
+                printf("*****************\n");
                 //順伝搬
                 forward(nn_param, train_data[i], w, size, layer_in, layer_out, out[i]);
+                printf("順伝搬: %d回 OK\n", i);
                 Loss_seq = nn_param.loss(out[i], t[i], nn_param.output_layer_size, 0, NULL);
+                printf("i = %d : %lf\n", i, Loss_seq);
                 //逆伝搬
                 backward(nn_param, w, size, layer_in, layer_out, out[i], t[i], dE_dw, dE_dw_t, dE_da);
+                printf("逆伝搬: %d回 OK\n", i);
                 //重みの更新
                 update_w(nn_param, epsilon, w, size, dE_dw_t);
+                printf("更新: %d回 OK\n", i);
             }
             //カウント
             seq_count++;
 
-            printf("%d : %lf\n", seq_count, Loss_seq);
-        }while(abs(Loss_seq) > LOSS_MIN && seq_count < N);
+            printf("seq_count = %d : %lf\n", seq_count, Loss_seq);
+        }while((abs(Loss_seq) > LOSS_MIN) && (seq_count < N));
 
           if(abs(Loss_seq) < LOSS_MIN){
             printf("勾配の大きさが一定値を下回りました。\n");
-            //printf("パラメータの値は%.4lf\n", a);
+            /*
+            for(i = 0; i <= nn_param.hidden_layer_size; i++) {
+                for(j = 0; j <= size[i]; j++) {
+                    for(k = 0; k <= size[i+1]; k++) {
+                        printf("w[%d][%d][%d] = %lf\n", i, j, k, w[i][j][k]);
+                    }
+                }
+            }*/
             printf("繰り返し回数は%d\n", seq_count);
         }else if(seq_count > N){
             printf("繰り返し回数が一定数を超えました。\n");

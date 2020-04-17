@@ -8,18 +8,18 @@
 //シグモイド関数
 double *Sigmoid(double *array, int size, int flag, double **matrix)
 {
-    double *out = NULL; //出力する配列
+    double *y = NULL; //出力する配列
 
     //動的メモリ確保
-    if((out = (double*)malloc((size + 1) * sizeof(double))) == NULL){
+    if((y = (double*)malloc((size + 1) * sizeof(double))) == NULL){
         return NULL;
     }
 
-    out[0] = 0.0;   //一個目の要素を0にする
+    y[0] = 1.0;   //一個目の要素を0にする
 
     //各要素について値の計算を行う
     for(int i = 1; i <= size; i++){
-        out[i] = 1.0 / (1.0 + exp(-array[i]));
+        y[i] = 1.0 / (1.0 + exp(-array[i]));
     }
 
     //逆伝搬時, 微分を計算
@@ -33,13 +33,13 @@ double *Sigmoid(double *array, int size, int flag, double **matrix)
 
         //微分を計算
         for(int i = 0; i <= size; i++){
-            matrix[i][i] = out[i] * (1.0 - out[i]);
+            matrix[i][i] = y[i] * (1.0 - y[i]);
         }
 
         return NULL;
     }
 
-    return out;
+    return y;
 }
 
 
@@ -125,33 +125,34 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
     layer_out[0] = data;    //入力層では入力データをそのまま出力する
 
     //中間層
-    for(i = 0; i < nn_param.hidden_layer_size; i++){
-        int prev_layer_size = size[i];
-        int curr_layer_size = size[i+1];
+    for(i = 1; i <= nn_param.hidden_layer_size; i++){       //i：中間層のインデックス
+        int prev_layer_size = size[i-1];
+        int curr_layer_size = size[i];
 
-        for(j = 1; j <= curr_layer_size; j++){
-            tmp = w[i][0][j];   //バイアス
+        for(j = 1; j <= curr_layer_size; j++){    //j：中間層第i+1層の素子のインデックス
+            tmp = w[i-1][0][j];   //バイアス
 
-            for(k = 1; k <= prev_layer_size; k++){
+            for(k = 1; k <= prev_layer_size; k++){    //k：中間層第i層の素子のインデックス
                 //前の層の出力をすべて足す
-                tmp += w[i][k][j] * layer_out[i][k];
+                tmp += w[i-1][k][j] * layer_out[i][k];
             }
 
-            layer_in[i+1][j] = tmp;     //次の層の入力に代入
+            layer_in[i][j] = tmp;     //次の層の入力に代入
         }
 
-        free(layer_out[i+1]);
+        free(layer_out[i]);
 
-        layer_out[i+1] = nn_param.act[i+1](layer_in[i+1], size[i+1], 0, NULL);
+        //入力をシグモイド関数で活性化し，出力に入れる
+        layer_out[i] = nn_param.act[i](layer_in[i], size[i], 0, NULL);
     }
 
     //出力層
     int prev_layer_size = size[i];
 
-    for(i = 1; i <= nn_param.output_layer_size; i++){
-        tmp = w[nn_param.hidden_layer_size][0][i];
+    for(i = 1; i <= nn_param.output_layer_size; i++){   //i：出力層の素子のインデックス
+        tmp = w[nn_param.hidden_layer_size][0][i];  //バイアス
 
-        for(j = 0; j <= prev_layer_size; j++){
+        for(j = 1; j <= prev_layer_size; j++){    //j：中間層の最後の層の素子のインデックス
             tmp += w[nn_param.hidden_layer_size][j][i] * layer_out[nn_param.hidden_layer_size][j];
         }
 
@@ -215,20 +216,19 @@ void backward(NN_PARAM nn_param, double ***w, int *size, double **layer_in, doub
     for(i = 1; i <= nn_param.output_layer_size; i++){
         free(dy_da[i]);
     }
-
     free(dy_da);
 
     //中間層
-    for(i = nn_param.hidden_layer_size; i >= 1; i--){
+    for(i = nn_param.hidden_layer_size; i >= 1; i--){    //i：中間層のインデックス
         int curr_layer_size = size[i];
         int next_layer_size = size[i+1];
         double z = 0.0;     //layer_out[i][j]
 
         //dE_dwの計算
-        for(j = 0; j <= curr_layer_size; j++){
+        for(j = 0; j <= curr_layer_size; j++){    //j：中間層第i層の素子のインデックス
             z = layer_out[i][j];
 
-            for(k = 0; k <= next_layer_size; k++){
+            for(k = 0; k <= next_layer_size; k++){    //k：中間層第i+1層の素子のインデックス
                 dE_dw[i][j][k] = z * dE_da[i+1][k];
             }
         }
