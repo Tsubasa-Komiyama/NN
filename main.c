@@ -49,11 +49,6 @@ int main(void){
         nn_param.num_unit[i] = unit_N;
     }
 
-    for(i = 1; i <= nn_param.hidden_layer_size; i++){
-        nn_param.act[i] = Sigmoid;
-    }
-
-    nn_param.act[nn_param.hidden_layer_size + 1] = Softmax;
     nn_param.loss = Mean_Square_Error;
 
     double **train_data = NULL;        //入力データ
@@ -106,6 +101,16 @@ int main(void){
             }
         }
     }
+
+    for(i = 0; i <= nn_param.hidden_layer_size; i++) {
+        for(j = 0; j <= size[i]; j++) {
+            for(k = 0; k <= size[i+1]; k++) {
+                printf("w[%d][%d][%d] = %lf\n", i, j, k, w[i][j][k]);
+            }
+        }
+    }
+
+
 
     //layer_out
     if((layer_out = (double**)malloc((nn_param.hidden_layer_size + 1) * sizeof(double*))) == NULL) {
@@ -253,6 +258,7 @@ int main(void){
 		printf("%.1lf %.1lf %.1lf %.1lf\n", train_data[i][1], train_data[i][2], train_data[i][3], t[i][1]);
 		i++;
 	}
+    printf("\n");
     fclose(fp);
 
     //未学習データ
@@ -268,9 +274,11 @@ int main(void){
 		printf("%.1lf %.1lf %.1lf\n", unlearn_data[i][1], unlearn_data[i][2], unlearn_data[i][3]);
 		i++;
 	}
+    printf("\n");
     fclose(fp);
 
     /**************************システム*****************************/
+
 
     printf("**************************************************\n");
     printf("ニューラルネットワーク\n");
@@ -345,7 +353,7 @@ int main(void){
         do{
             //教師データについて一つずつ順伝搬・逆伝搬・重みの更新を行う
             for(i = 0; i < data_num; i++){
-                printf("*****************\n");
+                printf("**************************************************\n");
                 //順伝搬
                 forward(nn_param, train_data[i], w, size, layer_in, layer_out, out[i]);
                 printf("順伝搬: %d回 OK\n", i);

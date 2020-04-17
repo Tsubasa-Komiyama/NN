@@ -21,7 +21,7 @@
      -仕様および処理を変更 (by Tsubasa Komiyama)
 */
 
-double* Sigmoid(double* array, int size, int flag, double **matrix);
+void Sigmoid(double* array, int size, int flag, double **matrix, double *y);
 
 /*!----------------------------------------------------------------------------
  @brif ソフトマックス関数
@@ -38,7 +38,7 @@ double* Sigmoid(double* array, int size, int flag, double **matrix);
      -基本的な機能の実装 (by Tsubasa Komiyama)
 */
 
-double *Softmax(double* array, int size, int flag, double** matrix);
+void Softmax(double* array, int size, int flag, double** matrix, double *y);
 
 /*!----------------------------------------------------------------------------
  @brif 平均二乗誤差を求める関数

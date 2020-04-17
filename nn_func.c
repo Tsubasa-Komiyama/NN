@@ -6,14 +6,9 @@
 #include <math.h>
 
 //シグモイド関数
-double *Sigmoid(double *array, int size, int flag, double **matrix)
+void Sigmoid(double *array, int size, int flag, double **matrix, double *y)
 {
-    double *y = NULL; //出力する配列
-
-    //動的メモリ確保
-    if((y = (double*)malloc((size + 1) * sizeof(double))) == NULL){
-        return NULL;
-    }
+    printf("v\n");
 
     y[0] = 1.0;   //一個目の要素を0にする
 
@@ -21,6 +16,8 @@ double *Sigmoid(double *array, int size, int flag, double **matrix)
     for(int i = 1; i <= size; i++){
         y[i] = 1.0 / (1.0 + exp(-array[i]));
     }
+
+    printf("v\n");
 
     //逆伝搬時, 微分を計算
     if(flag){
@@ -35,18 +32,13 @@ double *Sigmoid(double *array, int size, int flag, double **matrix)
         for(int i = 0; i <= size; i++){
             matrix[i][i] = y[i] * (1.0 - y[i]);
         }
-
-        return NULL;
     }
-
-    return y;
 }
 
 
 //ソフトマックス関数
-double *Softmax(double* array, int size, int flag, double** matrix)
+void Softmax(double* array, int size, int flag, double** matrix, double *y)
 {
-    double *y = NULL;
     double sum_exp = 0.0;
     double max_a = array[1];
 
@@ -54,11 +46,6 @@ double *Softmax(double* array, int size, int flag, double** matrix)
         if(array[i] > max_a){
             max_a = array[i];
         }
-    }
-
-    //動的メモリ確保
-    if((y = (double*)malloc((size + 1) * sizeof(double))) == NULL){
-        return NULL;
     }
 
     y[0] = 1.0;
@@ -82,11 +69,7 @@ double *Softmax(double* array, int size, int flag, double** matrix)
 
             matrix[i][i] = y[i] * (1.0 - y[i]);
         }
-
-        return NULL;
     }
-
-    return y;
 }
 
 
@@ -124,15 +107,19 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
     //入力層
     layer_out[0] = data;    //入力層では入力データをそのまま出力する
 
-    printf("a\n");
+    printf("%lf\n", w[0][0][1]);
 
+    printf("a\n");
+    
     //中間層
     for(i = 1; i <= nn_param.hidden_layer_size; i++){       //i：中間層のインデックス
         int prev_layer_size = size[i-1];
         int curr_layer_size = size[i];
 
         for(j = 1; j <= curr_layer_size; j++){    //j：中間層第i+1層の素子のインデックス
+            printf("%lf\n", w[0][0][0]);
             tmp = w[i-1][0][j];   //バイアス
+            printf("kl\n");
 
             for(k = 1; k <= prev_layer_size; k++){    //k：中間層第i層の素子のインデックス
                 //前の層の出力をすべて足す
@@ -142,10 +129,10 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
             layer_in[i][j] = tmp;     //次の層の入力に代入
         }
 
-        free(layer_out[i]);
+        printf("f\n");
 
         //入力をシグモイド関数で活性化し，出力に入れる
-        layer_out[i] = nn_param.act[i](layer_in[i], size[i], 0, NULL);
+        Sigmoid(layer_in[i], size[i], 0, NULL, layer_out[i]);
     }
     printf("b\n");
 
@@ -162,12 +149,14 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
         layer_in[nn_param.hidden_layer_size + 1][i] = tmp;
     }
 
-    //free(out);
-
     printf("c\n");
 
-    out = nn_param.act[nn_param.hidden_layer_size + 1](layer_in[nn_param.hidden_layer_size + 1], nn_param.output_layer_size, 0, NULL);
+    //free(out);
+
     printf("d\n");
+
+    Softmax(layer_in[nn_param.hidden_layer_size + 1], nn_param.output_layer_size, 0, NULL, out);
+    printf("e\n");
 }
 
 
@@ -204,7 +193,7 @@ void backward(NN_PARAM nn_param, double ***w, int *size, double **layer_in, doub
 
     //出力層
     //dy_daを計算
-    nn_param.act[nn_param.hidden_layer_size + 1](layer_in[nn_param.hidden_layer_size + 1], nn_param.output_layer_size, 1, dy_da);
+    Softmax(layer_in[nn_param.hidden_layer_size + 1], nn_param.output_layer_size, 1, dy_da, out);
 
     for(i = 1; i <= nn_param.output_layer_size; i++){
         tmp = 0.0;
@@ -255,7 +244,7 @@ void backward(NN_PARAM nn_param, double ***w, int *size, double **layer_in, doub
         }
 
         //dz_daの計算
-        nn_param.act[i](layer_in[i], curr_layer_size, 1, dz_da);
+        Sigmoid(layer_in[i], curr_layer_size, 1, dz_da, out);
 
         //dE_daの計算
         for(j = 1; j <= curr_layer_size; j++){
@@ -331,11 +320,6 @@ NN_PARAM set_param(NN_PARAM nn_param)
     nn_param.num_unit[0] = nn_param.input_layer_size;
     nn_param.num_unit[nn_param.hidden_layer_size + 1] = nn_param.output_layer_size;
 
-    if((nn_param.act = (double* (**)(double*, int, int, double**))malloc((nn_param.hidden_layer_size + 2) * sizeof(double (**)(double*, double*, int, int, double*)))) == NULL){
-        exit(-1);
-    }
-
-    nn_param.act[0] = NULL;
     nn_param.loss = NULL;
 
     return nn_param;

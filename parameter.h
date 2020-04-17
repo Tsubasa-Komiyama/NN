@@ -8,7 +8,6 @@ typedef struct {
     int hidden_layer_size;  //中間層のサイズ
     int output_layer_size;  //出力層のサイズ
     int *num_unit;    //中間層の素子数
-    double *(**act)(double *array, int size, int flag, double **matrix);     //各層の活性化関数
     double (*loss)(double *y, double *t, int size, int flag, double *dE_dy);
 } NN_PARAM;
 
