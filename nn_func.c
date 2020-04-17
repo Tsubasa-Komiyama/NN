@@ -124,6 +124,8 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
     //入力層
     layer_out[0] = data;    //入力層では入力データをそのまま出力する
 
+    printf("a\n");
+
     //中間層
     for(i = 1; i <= nn_param.hidden_layer_size; i++){       //i：中間層のインデックス
         int prev_layer_size = size[i-1];
@@ -145,6 +147,7 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
         //入力をシグモイド関数で活性化し，出力に入れる
         layer_out[i] = nn_param.act[i](layer_in[i], size[i], 0, NULL);
     }
+    printf("b\n");
 
     //出力層
     int prev_layer_size = size[i];
@@ -159,9 +162,12 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
         layer_in[nn_param.hidden_layer_size + 1][i] = tmp;
     }
 
-    free(out);
+    //free(out);
+
+    printf("c\n");
 
     out = nn_param.act[nn_param.hidden_layer_size + 1](layer_in[nn_param.hidden_layer_size + 1], nn_param.output_layer_size, 0, NULL);
+    printf("d\n");
 }
 
 
