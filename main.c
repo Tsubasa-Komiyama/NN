@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 #include <conio.h>
 
 #define KEY_SIZE 2  //keyの要素数
@@ -49,6 +50,11 @@ int main(void){
         nn_param.num_unit[i] = unit_N;
     }
 
+    for(i = 1; i <= nn_param.hidden_layer_size; i++){
+        nn_param.act[i] = Sigmoid;
+    }
+
+    nn_param.act[nn_param.hidden_layer_size + 1] = Softmax;
     nn_param.loss = Mean_Square_Error;
 
     double **train_data = NULL;        //入力データ
@@ -109,8 +115,7 @@ int main(void){
             }
         }
     }
-
-
+    printf("\n");
 
     //layer_out
     if((layer_out = (double**)malloc((nn_param.hidden_layer_size + 1) * sizeof(double*))) == NULL) {
@@ -308,8 +313,9 @@ int main(void){
             for(i = 0; i < data_num; i++){
                 //順伝搬
                 forward(nn_param, train_data[i], w, size, layer_in, layer_out, out[i]);
+                printf("i = %d : %lf\n", i, out[i][1]);
                 Loss_batch += nn_param.loss(out[i], t[i], nn_param.output_layer_size, 0, NULL) / data_num;
-                printf("i = %d : %lf\n", i, Loss_batch);
+                printf("Loss : %lf\n", Loss_batch);
                 //逆伝搬
                 backward(nn_param, w, size, layer_in, layer_out, out[i], t[i], dE_dw, dE_dw_t, dE_da);
             }
@@ -321,9 +327,9 @@ int main(void){
             batch_count++;
 
             printf("batch_count = %d : %lf\n", batch_count, Loss_batch);
-        }while(abs(Loss_batch) > LOSS_MIN && batch_count < N);
+        }while(fabs(Loss_batch) > LOSS_MIN && batch_count < N);
 
-          if(abs(Loss_batch) < LOSS_MIN){
+          if(fabs(Loss_batch) < LOSS_MIN){
             printf("勾配の大きさが一定値を下回りました。\n");
             printf("損失の大きさ : %lf\n", Loss_batch);
             /*
@@ -355,10 +361,13 @@ int main(void){
             for(i = 0; i < data_num; i++){
                 printf("**************************************************\n");
                 //順伝搬
+                //printf("out[] : %p\n", out[i]);
                 forward(nn_param, train_data[i], w, size, layer_in, layer_out, out[i]);
                 printf("順伝搬: %d回 OK\n", i);
+                //printf("layer_out : %lf %lf\n", layer_out[i][0], layer_out[i][1]);
+                printf("i = %d : %lf %lf\n", i, out[i][0], out[i][1]);
                 Loss_seq = nn_param.loss(out[i], t[i], nn_param.output_layer_size, 0, NULL);
-                printf("i = %d : %lf\n", i, Loss_seq);
+                printf("Loss : %lf\n", Loss_seq);
                 //逆伝搬
                 backward(nn_param, w, size, layer_in, layer_out, out[i], t[i], dE_dw, dE_dw_t, dE_da);
                 printf("逆伝搬: %d回 OK\n", i);
@@ -370,9 +379,10 @@ int main(void){
             seq_count++;
 
             printf("seq_count = %d : %lf\n", seq_count, Loss_seq);
-        }while((abs(Loss_seq) > LOSS_MIN) && (seq_count < N));
+            printf("%lf < %lfb : %d\n", fabs(Loss_seq), LOSS_MIN, fabs(Loss_seq) < LOSS_MIN);
+        }while((fabs(Loss_seq) > LOSS_MIN) && (seq_count < N));
 
-          if(abs(Loss_seq) < LOSS_MIN){
+          if(fabs(Loss_seq) < LOSS_MIN){
             printf("勾配の大きさが一定値を下回りました。\n");
             /*
             for(i = 0; i <= nn_param.hidden_layer_size; i++) {
