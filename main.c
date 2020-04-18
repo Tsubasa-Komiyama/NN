@@ -87,6 +87,7 @@ int main(void){
         exit(-1);
     }
 
+    //乱数の初期化
     srand((unsigned int)time(NULL));
 
     for(i = 0; i <= nn_param.hidden_layer_size; i++) {
@@ -323,9 +324,7 @@ int main(void){
             for(i = 0; i < data_num; i++){
                 //順伝搬
                 forward(nn_param, train_data[i], w, size, layer_in, layer_out, out[i]);
-                //printf("i = %d : %lf\n", i, out[i][1]);
                 Loss_batch += nn_param.loss(out[i], t[i], nn_param.output_layer_size, 0, NULL) / data_num;
-                //printf("Loss : %lf\n", Loss_batch);
                 //逆伝搬
                 backward(nn_param, w, size, layer_in, layer_out, out[i], t[i], dE_dw, dE_dw_t, dE_da);
             }
@@ -393,32 +392,15 @@ int main(void){
         do{
             //教師データについて一つずつ順伝搬・逆伝搬・重みの更新を行う
             for(i = 0; i < data_num; i++){
-                //printf("**************************************************\n");
                 //順伝搬
-                //printf("out[] : %p\n", out[i]);
                 forward(nn_param, train_data[i], w, size, layer_in, layer_out, out[i]);
-                //printf("順伝搬: %d回 OK\n", i);
-                //printf("layer_out : %lf %lf\n", layer_out[i][0], layer_out[i][1]);
-                //printf("i = %d : %lf %lf\n", i, out[i][0], out[i][1]);
                 Loss_seq = nn_param.loss(out[i], t[i], nn_param.output_layer_size, 0, NULL);
-                //printf("Loss : %lf\n", Loss_seq);
+
                 //逆伝搬
                 backward(nn_param, w, size, layer_in, layer_out, out[i], t[i], dE_dw, dE_dw_t, dE_da);
-                //printf("逆伝搬: %d回 OK\n", i);
+
                 //重みの更新
                 update_w(nn_param, epsilon, w, size, dE_dw);
-                //printf("更新: %d回 OK\n", i);
-                /*
-                for(int l = 0; l <= nn_param.hidden_layer_size; l++) {
-                    for(j = 0; j <= size[i]; j++) {
-                        for(k = 0; k <= size[i+1]; k++) {
-                            printf("w[%d][%d][%d] = %.5lf  ", l, j, k, w[l][j][k]);
-                        }
-                        printf("\n");
-                    }
-                    printf("\n");
-                }
-                */
             }
             //カウント
             seq_count++;

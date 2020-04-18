@@ -127,13 +127,6 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
     //入力層
     layer_out[0] = data;    //入力層では入力データをそのまま出力する
 
-    /*
-    for(i = 1; i <= nn_param.input_layer_size; i++){
-        printf("layer_out[0][%d] = %lf ", i, layer_out[0][i]);
-    }
-    printf("\n");
-    */
-
     //中間層
     for(i = 1; i <= nn_param.hidden_layer_size; i++){       //i：中間層のインデックス
         int prev_layer_size = size[i-1];
@@ -150,17 +143,6 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
             layer_in[i][j] = tmp;     //次の層の入力に代入
         }
 
-        /*
-
-        if(layer_out[i] != NULL){
-            free(layer_out[i]);
-        }
-
-        layer_out[i] = NULL;
-
-        */
-
-        //printf("layer_out : %p\n", layer_out[i]);
         layer_out_p = nn_param.act[i](layer_in[i], size[i], 0, NULL);
 
         //入力をシグモイド関数で活性化し，出力に入れる
@@ -168,15 +150,6 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
             layer_out[i][j] = *layer_out_p;
             layer_out_p++;
         }
-
-        /*
-        printf("layer_out : %d\n", i);
-
-        for(j = 1; j <= curr_layer_size; j++){    //j：中間層第i+1層の素子のインデックス
-            printf("%lf ", layer_out[i][j]);
-        }
-        printf("\n");
-        */
     }
 
     //出力層
@@ -188,29 +161,16 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
 
         for(j = 0; j <= prev_layer_size; j++){    //j：中間層の最後の層の素子のインデックス
             tmp += w[nn_param.hidden_layer_size][j][i] * layer_out[nn_param.hidden_layer_size][j];
-            //printf("tmp(%d) = %lf ", j, tmp);
         }
-        //printf("\n");
 
         layer_in[nn_param.hidden_layer_size + 1][i] = tmp;
     }
 
-    /*
-    printf("layer_in\n");
-    for(j = 1; j <= nn_param.output_layer_size; j++){
-        printf("%lf ", layer_in[nn_param.hidden_layer_size + 1][j]);
-    }
-    printf("\n");
-    */
-
     out_p = nn_param.act[nn_param.hidden_layer_size + 1](layer_in[nn_param.hidden_layer_size + 1], nn_param.output_layer_size, 0, NULL);
-    //printf("%p %p\n", &out[0], &out[1]);
     for(i = 0; i <= nn_param.output_layer_size; i++){
         out[i] = *out_p;
         out_p++;
     }
-
-    //printf("%lf %lf\n", out[0], out[1]);
 }
 
 
@@ -219,8 +179,8 @@ void backward(NN_PARAM nn_param, double ***w, int *size, double **layer_in, doub
 {
     int i, j, k;     //制御変数
     double *dE_dy;      //出力層での損失関数の微分
-    double **dy_da;     //
-    double **dz_da;     //
+    double **dy_da;
+    double **dz_da;
     double tmp;
 
     //dE_dyの初期化
@@ -245,30 +205,9 @@ void backward(NN_PARAM nn_param, double ***w, int *size, double **layer_in, doub
         }
     }
 
-    /*
-    printf("before\n");
-    for(i = 1; i <= nn_param.output_layer_size; i++){
-        for(j = 1; j <= nn_param.output_layer_size; j++){
-            printf("[%d][%d] = %lf ", i, j, dy_da[i][j]);
-        }
-        printf("\n");
-    }
-    */
-
     //出力層
     //dy_daを計算
     nn_param.act[nn_param.hidden_layer_size + 1](layer_in[nn_param.hidden_layer_size + 1], nn_param.output_layer_size, 1, dy_da);
-
-    /*
-    printf("after\n");
-    for(i = 1; i <= nn_param.output_layer_size; i++){
-        for(j = 1; j <= nn_param.output_layer_size; j++){
-            printf("[%d][%d] = %lf ", i, j, dy_da[i][j]);
-        }
-        printf("\n");
-    }
-    */
-
 
     for(i = 1; i <= nn_param.output_layer_size; i++){
         tmp = 0.0;
