@@ -8,8 +8,8 @@
 #include <conio.h>
 
 #define KEY_SIZE 2  //keyの要素数
-#define N 10000       //試行回数の最大値
-#define LOSS_MIN 0.0000001 //損失の閾値
+#define N 50000       //試行回数の最大値
+#define LOSS_MIN 0.001 //損失の閾値
 
 int main(void){
     int i, j, k;        //制御変数
@@ -39,9 +39,6 @@ int main(void){
     printf("出力層の素子数を入力してください：\n");
     scanf("%d", &nn_param.output_layer_size);
 
-    printf("学習率を入力してください：\n");
-    scanf("%lf", &epsilon);
-
 
     /**************************各種パラメータの設定*****************************/
     nn_param = set_param(nn_param);
@@ -50,11 +47,10 @@ int main(void){
         nn_param.num_unit[i] = unit_N;
     }
 
-    for(i = 1; i <= nn_param.hidden_layer_size; i++){
+    for(i = 1; i <= nn_param.hidden_layer_size + 1; i++){
         nn_param.act[i] = Sigmoid;
     }
 
-    nn_param.act[nn_param.hidden_layer_size + 1] = Softmax;
     nn_param.loss = Mean_Square_Error;
 
     double **train_data = NULL;        //入力データ
@@ -305,6 +301,10 @@ int main(void){
       switch (key) {
         case 'a':
         /**************************一括学習*************************************/
+        printf("学習率を入力してください：\n");
+        scanf("%lf", &epsilon);
+        printf("\n");
+
         printf("一括学習の処理を始めます．\n");
         batch_count = 0;    //カウントの初期化
         do{
@@ -354,33 +354,59 @@ int main(void){
 
         case 'b':
         /**************************逐次学習*************************************/
+        printf("学習率を入力してください：\n");
+        scanf("%lf", &epsilon);
+        printf("\n");
+
         printf("逐次学習の処理を始めます．\n");
+        //損失関数を出力するファイルを開く
+        fp = fopen("loss.csv", "w");
+        if( fp == NULL ){
+            printf( "ファイルが開けません\n");
+            return -1;
+        }
         seq_count = 0;  //カウントの初期化
         do{
             //教師データについて一つずつ順伝搬・逆伝搬・重みの更新を行う
             for(i = 0; i < data_num; i++){
-                printf("**************************************************\n");
+                //printf("**************************************************\n");
                 //順伝搬
                 //printf("out[] : %p\n", out[i]);
                 forward(nn_param, train_data[i], w, size, layer_in, layer_out, out[i]);
-                printf("順伝搬: %d回 OK\n", i);
+                //printf("順伝搬: %d回 OK\n", i);
                 //printf("layer_out : %lf %lf\n", layer_out[i][0], layer_out[i][1]);
-                printf("i = %d : %lf %lf\n", i, out[i][0], out[i][1]);
+                //printf("i = %d : %lf %lf\n", i, out[i][0], out[i][1]);
                 Loss_seq = nn_param.loss(out[i], t[i], nn_param.output_layer_size, 0, NULL);
-                printf("Loss : %lf\n", Loss_seq);
+                //printf("Loss : %lf\n", Loss_seq);
                 //逆伝搬
                 backward(nn_param, w, size, layer_in, layer_out, out[i], t[i], dE_dw, dE_dw_t, dE_da);
-                printf("逆伝搬: %d回 OK\n", i);
+                //printf("逆伝搬: %d回 OK\n", i);
                 //重みの更新
                 update_w(nn_param, epsilon, w, size, dE_dw_t);
-                printf("更新: %d回 OK\n", i);
+                //printf("更新: %d回 OK\n", i);
+                /*
+                for(int l = 0; l <= nn_param.hidden_layer_size; l++) {
+                    for(j = 0; j <= size[i]; j++) {
+                        for(k = 0; k <= size[i+1]; k++) {
+                            printf("w[%d][%d][%d] = %.5lf  ", l, j, k, w[l][j][k]);
+                        }
+                        printf("\n");
+                    }
+                    printf("\n");
+                }
+                */
             }
             //カウント
             seq_count++;
 
-            printf("seq_count = %d : %lf\n", seq_count, Loss_seq);
-            printf("%lf < %lfb : %d\n", fabs(Loss_seq), LOSS_MIN, fabs(Loss_seq) < LOSS_MIN);
+            if(seq_count % 1000 == 0){
+                printf("seq_count = %d : %lf\n", seq_count, Loss_seq);
+            }
+
+            fprintf(fp, "%d,%lf\n", seq_count, Loss_seq);
         }while((fabs(Loss_seq) > LOSS_MIN) && (seq_count < N));
+
+        fclose(fp);
 
           if(fabs(Loss_seq) < LOSS_MIN){
             printf("勾配の大きさが一定値を下回りました。\n");

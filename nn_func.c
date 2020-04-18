@@ -15,7 +15,7 @@ double *Sigmoid(double *array, int size, int flag, double **matrix)
         return NULL;
     }
 
-    y[0] = 1.0;   //一個目の要素を0にする
+    y[0] = 1.0;   //一個目の要素を1にする
 
     //各要素について値の計算を行う
     for(int i = 1; i <= size; i++){
@@ -127,6 +127,13 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
     //入力層
     layer_out[0] = data;    //入力層では入力データをそのまま出力する
 
+    /*
+    for(i = 1; i <= nn_param.input_layer_size; i++){
+        printf("layer_out[0][%d] = %lf ", i, layer_out[0][i]);
+    }
+    printf("\n");
+    */
+
     //中間層
     for(i = 1; i <= nn_param.hidden_layer_size; i++){       //i：中間層のインデックス
         int prev_layer_size = size[i-1];
@@ -137,7 +144,7 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
 
             for(k = 1; k <= prev_layer_size; k++){    //k：中間層第i層の素子のインデックス
                 //前の層の出力をすべて足す
-                tmp += w[i-1][k][j] * layer_out[i][k];
+                tmp += w[i-1][k][j] * layer_out[i-1][k];
             }
 
             layer_in[i][j] = tmp;     //次の層の入力に代入
@@ -163,7 +170,7 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
         }
 
         /*
-        printf("layer_out : %p\n", layer_out[i]);
+        printf("layer_out : %d\n", i);
 
         for(j = 1; j <= curr_layer_size; j++){    //j：中間層第i+1層の素子のインデックス
             printf("%lf ", layer_out[i][j]);
@@ -173,36 +180,37 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
     }
 
     //出力層
-    int prev_layer_size = size[i];
+    int prev_layer_size = nn_param.hidden_layer_size;
+    //printf("prev_layer_size : %d\n", prev_layer_size);
 
     for(i = 1; i <= nn_param.output_layer_size; i++){   //i：出力層の素子のインデックス
         tmp = w[nn_param.hidden_layer_size][0][i];  //バイアス
 
-        for(j = 1; j <= prev_layer_size; j++){    //j：中間層の最後の層の素子のインデックス
+        for(j = 0; j <= prev_layer_size; j++){    //j：中間層の最後の層の素子のインデックス
             tmp += w[nn_param.hidden_layer_size][j][i] * layer_out[nn_param.hidden_layer_size][j];
+            //printf("tmp(%d) = %lf ", j, tmp);
         }
+        //printf("\n");
 
         layer_in[nn_param.hidden_layer_size + 1][i] = tmp;
     }
 
     /*
-
-    if(out != NULL){
-        free(out);
+    printf("layer_in\n");
+    for(j = 1; j <= nn_param.output_layer_size; j++){
+        printf("%lf ", layer_in[nn_param.hidden_layer_size + 1][j]);
     }
-
-    out = NULL;
+    printf("\n");
     */
 
-    out_p = nn_param.act[nn_param.hidden_layer_size](layer_in[nn_param.hidden_layer_size + 1], nn_param.output_layer_size, 0, NULL);
+    out_p = nn_param.act[nn_param.hidden_layer_size + 1](layer_in[nn_param.hidden_layer_size + 1], nn_param.output_layer_size, 0, NULL);
     //printf("%p %p\n", &out[0], &out[1]);
     for(i = 0; i <= nn_param.output_layer_size; i++){
         out[i] = *out_p;
         out_p++;
     }
-    //out = nn_param.act[nn_param.hidden_layer_size](layer_in[nn_param.hidden_layer_size + 1], nn_param.output_layer_size, 0, NULL);
 
-    //printf("%p %p\n", &out[0], &out[1]);
+    //printf("%lf %lf\n", out[0], out[1]);
 }
 
 
@@ -231,15 +239,36 @@ void backward(NN_PARAM nn_param, double ***w, int *size, double **layer_in, doub
         exit(-1);
     }
 
-    for(i = 1; i <= nn_param.output_layer_size; i++){
+    for(i = 0; i <= nn_param.output_layer_size; i++){
         if((dy_da[i] = (double*)malloc((nn_param.output_layer_size + 1) * sizeof(double))) == NULL){
             exit(-1);
         }
     }
 
+    /*
+    printf("before\n");
+    for(i = 1; i <= nn_param.output_layer_size; i++){
+        for(j = 1; j <= nn_param.output_layer_size; j++){
+            printf("[%d][%d] = %lf ", i, j, dy_da[i][j]);
+        }
+        printf("\n");
+    }
+    */
+
     //出力層
     //dy_daを計算
     nn_param.act[nn_param.hidden_layer_size + 1](layer_in[nn_param.hidden_layer_size + 1], nn_param.output_layer_size, 1, dy_da);
+
+    /*
+    printf("after\n");
+    for(i = 1; i <= nn_param.output_layer_size; i++){
+        for(j = 1; j <= nn_param.output_layer_size; j++){
+            printf("[%d][%d] = %lf ", i, j, dy_da[i][j]);
+        }
+        printf("\n");
+    }
+    */
+
 
     for(i = 1; i <= nn_param.output_layer_size; i++){
         tmp = 0.0;
@@ -254,7 +283,7 @@ void backward(NN_PARAM nn_param, double ***w, int *size, double **layer_in, doub
     //メモリ解放
     free(dE_dy);
 
-    for(i = 1; i <= nn_param.output_layer_size; i++){
+    for(i = 0; i <= nn_param.output_layer_size; i++){
         free(dy_da[i]);
     }
     free(dy_da);
