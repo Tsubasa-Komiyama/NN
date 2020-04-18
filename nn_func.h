@@ -66,6 +66,11 @@ double Mean_Square_Error(double* y, double* t, int size, int flag, double* dE_dy
   順伝搬における入力層，中間層，出力層での処理を定義
  @param [in] nn_param(NN_PARAM) NN_PARAM構造体のデータ
  @param [in] data(double*) 入力するデータ
+ @param [in] w(double***) 重み・バイアス
+ @param [in] size(int*) 各層の素子数を格納してある配列
+ @param [in] layer_in(double**) 各層の入力
+ @param [in] layer_out(double**) 各層の出力
+ @param [in] out(double*) NNの出力
  @return なし
  @attention
  @par 更新履歴
@@ -73,6 +78,8 @@ double Mean_Square_Error(double* y, double* t, int size, int flag, double* dE_dy
      -基本的な機能の実装 (by Tsubasa Komiyama)
    - 2020/4/16
      -引数の変更
+   - 2020/4/17
+     -内部での処理の修正
 */
 
 void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **layer_in, double **layer_out, double *out);
@@ -82,6 +89,15 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
 
   逆伝搬における入力層，中間層，出力層での処理を定義
  @param [in] nn_param(NN_PARAM) NN_PARAM構造体のデータ
+ @param [in] w(double***) 重み・バイアス
+ @param [in] size(int*) 各層の素子数を格納してある配列
+ @param [in] layer_in(double**) 各層の入力
+ @param [in] layer_out(double**) 各層の出力
+ @param [in] out(double*) NNの出力
+ @param [in] t(double*) 正解データ
+ @param [in,out] dE_dw(double***) 損失の微分
+ @param [in,out] dE_dw_t(double***) dE_dw_tの合計
+ @param [in] dE_da(double**)  微分の計算で使用
  @return なし
  @attention
  @par 更新履歴
@@ -89,6 +105,8 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
      -基本的な機能の実装 (by Tsubasa Komiyama)
    - 2020/4/16
      -引数の変更
+   - 2020/4/18
+     -内部での処理の修正
 */
 
 void backward(NN_PARAM nn_param, double ***w, int *size, double **layer_in, double **layer_out, double *out, double *t, double ***dE_dw, double ***dE_dw_t, double **dE_da);
@@ -96,17 +114,19 @@ void backward(NN_PARAM nn_param, double ***w, int *size, double **layer_in, doub
 /*!----------------------------------------------------------------------------
  @brif 重みの更新を行う関数
 
-  逆伝搬の結果から重みを更新する
+  逆伝搬の結果から重みを更新する. 逐次学習で使用.
  @param [in] nn_param(NN_PARAM) NN_PARAM構造体のデータ
  @param [in] epsilon(double) 学習率
  @param [in] w(double***) 重み
- @param [in] size(int*) 学習率
- @param [in] dE_dw_t(double***) dE_dwの合計
+ @param [in] size(int*) 各層の素子数を格納してある配列
+ @param [in] dE_dw(double***) 逆伝搬で得た損失の微分
  @return なし
  @attention
  @par 更新履歴
    - 2020/4/15
      -基本的な機能の実装 (by Tsubasa Komiyama)
+   - 2020/4/18
+     -引数および内部の処理の修正
 */
 
 void update_w(NN_PARAM nn_param, double epsilon, double ***w, int *size, double ***dE_dw);
@@ -114,11 +134,11 @@ void update_w(NN_PARAM nn_param, double epsilon, double ***w, int *size, double 
 /*!----------------------------------------------------------------------------
  @brif 重みの更新を行う関数
 
-  全部の教師データの損失から重みを更新する
+  全部の教師データの損失から重みを更新する. 一括学習で使用.
  @param [in] nn_param(NN_PARAM) NN_PARAM構造体のデータ
  @param [in] epsilon(double) 学習率
  @param [in] w(double***) 重み
- @param [in] size(int*) 学習率
+ @param [in] size(int*) 各層の素子数を格納してある配列
  @param [in] dE_dw_t(double***) dE_dwの合計
  @param [in] batch_size(int) データ数
  @return なし
