@@ -164,7 +164,7 @@ void forward(NN_PARAM nn_param, double *data, double ***w, int *size, double **l
         layer_out_p = nn_param.act[i](layer_in[i], size[i], 0, NULL);
 
         //入力をシグモイド関数で活性化し，出力に入れる
-        for(j = 1; j <= curr_layer_size; j++){    //j：中間層第i+1層の素子のインデックス
+        for(j = 0; j <= curr_layer_size; j++){    //j：中間層第i+1層の素子のインデックス
             layer_out[i][j] = *layer_out_p;
             layer_out_p++;
         }
@@ -300,6 +300,7 @@ void backward(NN_PARAM nn_param, double ***w, int *size, double **layer_in, doub
 
             for(k = 0; k <= next_layer_size; k++){    //k：中間層第i+1層の素子のインデックス
                 dE_dw[i][j][k] = z * dE_da[i+1][k];
+                dE_dw_t[i][j][k] += dE_dw[i][j][k];
             }
         }
 
@@ -355,7 +356,7 @@ void backward(NN_PARAM nn_param, double ***w, int *size, double **layer_in, doub
 
 
 //重みの更新
-void update_w(NN_PARAM nn_param, double epsilon, double ***w, int *size, double ***dE_dw_t)
+void update_w(NN_PARAM nn_param, double epsilon, double ***w, int *size, double ***dE_dw)
 {
     for(int i = 0; i <= nn_param.hidden_layer_size; i++){
         int curr_layer_size = size[i];
@@ -363,7 +364,7 @@ void update_w(NN_PARAM nn_param, double epsilon, double ***w, int *size, double 
 
         for(int j = 1; j <= curr_layer_size; j++){
             for(int k = 0; k <= next_layer_size; k++){
-                w[i][j][k] -= epsilon * dE_dw_t[i][j][k];
+                w[i][j][k] -= epsilon * dE_dw[i][j][k];
             }
         }
     }

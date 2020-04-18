@@ -109,7 +109,7 @@ void backward(NN_PARAM nn_param, double ***w, int *size, double **layer_in, doub
      -基本的な機能の実装 (by Tsubasa Komiyama)
 */
 
-void update_w(NN_PARAM nn_param, double epsilon, double ***w, int *size, double ***dE_dw_t);
+void update_w(NN_PARAM nn_param, double epsilon, double ***w, int *size, double ***dE_dw);
 
 /*!----------------------------------------------------------------------------
  @brif 重みの更新を行う関数

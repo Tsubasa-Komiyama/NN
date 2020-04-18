@@ -8,7 +8,7 @@
 #include <conio.h>
 
 #define KEY_SIZE 2  //keyの要素数
-#define N 50000       //試行回数の最大値
+#define N 100000       //試行回数の最大値
 #define LOSS_MIN 0.001 //損失の閾値
 
 int main(void){
@@ -23,6 +23,7 @@ int main(void){
     int batch_count;    //一括学習回数
     int seq_count;      //逐次学習回数
     int data_num = 6;   //データの数
+    int unlearn_num = 2;    //未学習データの数
 
 
     /**************************層数・素子数の設定*****************************/
@@ -104,14 +105,24 @@ int main(void){
         }
     }
 
+    //学習前のパラメータを出力するファイルを開く
+    fp = fopen("w.csv", "w");
+    if( fp == NULL ){
+        printf( "ファイルが開けません\n");
+        return -1;
+    }
+
     for(i = 0; i <= nn_param.hidden_layer_size; i++) {
         for(j = 0; j <= size[i]; j++) {
             for(k = 0; k <= size[i+1]; k++) {
                 printf("w[%d][%d][%d] = %lf\n", i, j, k, w[i][j][k]);
+                fprintf(fp, "%d,%d,%d,%lf\n", i, j, k, w[i][j][k]);
             }
         }
     }
     printf("\n");
+
+    fclose(fp);
 
     //layer_out
     if((layer_out = (double**)malloc((nn_param.hidden_layer_size + 1) * sizeof(double*))) == NULL) {
@@ -262,22 +273,6 @@ int main(void){
     printf("\n");
     fclose(fp);
 
-    //未学習データ
-    //ファイルオープン
-	if ((fp = fopen("unlearn_data.txt", "r")) == NULL) {
-        printf("ファイルを開けませんでした．\n");
-        return -1;
-	}
-	//データ読み込み
-    printf("未学習データ\n");
-    i = 0;
-	while ((fscanf(fp, "%lf %lf %lf", &unlearn_data[i][1], &unlearn_data[i][2], &unlearn_data[i][3])) != EOF) {
-		printf("%.1lf %.1lf %.1lf\n", unlearn_data[i][1], unlearn_data[i][2], unlearn_data[i][3]);
-		i++;
-	}
-    printf("\n");
-    fclose(fp);
-
     /**************************システム*****************************/
 
 
@@ -291,6 +286,7 @@ int main(void){
       printf("[a] 一括更新学習法\n");
       printf("[b] 逐次更新学習法\n");
       printf("[c] 学習済みニューロンのテスト\n");
+      printf("[d] パラメータのリセット\n");
       printf("[ESC] プログラム終了\n");
 
       printf("**************************************************\n");
@@ -303,19 +299,33 @@ int main(void){
         /**************************一括学習*************************************/
         printf("学習率を入力してください：\n");
         scanf("%lf", &epsilon);
-        printf("\n");
+        printf("**************************************************\n");
 
         printf("一括学習の処理を始めます．\n");
+        //損失を格納するファイルを開く
+        fp = fopen("loss_batch.csv", "w");
+        if( fp == NULL ){
+            printf( "ファイルが開けません\n");
+            return -1;
+        }
         batch_count = 0;    //カウントの初期化
         do{
+            //dE_dw_tのリセット
+            for(i = 0; i <= nn_param.hidden_layer_size; i++) {
+                for(j = 0; j <= size[i]; j++) {
+                    for(k = 0; k <= size[i+1]; k++) {
+                        dE_dw_t[i][j][k] = 0.0;
+                    }
+                }
+            }
             //教師データについて一つずつ順伝搬・逆伝搬を行い，重みの更新はエポックごとに行う
             Loss_batch = 0.0;
             for(i = 0; i < data_num; i++){
                 //順伝搬
                 forward(nn_param, train_data[i], w, size, layer_in, layer_out, out[i]);
-                printf("i = %d : %lf\n", i, out[i][1]);
+                //printf("i = %d : %lf\n", i, out[i][1]);
                 Loss_batch += nn_param.loss(out[i], t[i], nn_param.output_layer_size, 0, NULL) / data_num;
-                printf("Loss : %lf\n", Loss_batch);
+                //printf("Loss : %lf\n", Loss_batch);
                 //逆伝搬
                 backward(nn_param, w, size, layer_in, layer_out, out[i], t[i], dE_dw, dE_dw_t, dE_da);
             }
@@ -326,28 +336,42 @@ int main(void){
             //カウント
             batch_count++;
 
-            printf("batch_count = %d : %lf\n", batch_count, Loss_batch);
+            if(batch_count % 500 == 0){
+                printf("batch_count = %d : %lf\n", batch_count, Loss_batch);
+            }
+            fprintf(fp, "%d,%lf\n", batch_count, Loss_batch);
         }while(fabs(Loss_batch) > LOSS_MIN && batch_count < N);
 
-          if(fabs(Loss_batch) < LOSS_MIN){
-            printf("勾配の大きさが一定値を下回りました。\n");
-            printf("損失の大きさ : %lf\n", Loss_batch);
-            /*
-            for(i = 0; i <= nn_param.hidden_layer_size; i++) {
-                for(j = 0; j <= size[i]; j++) {
-                    for(k = 0; k <= size[i+1]; k++) {
-                        printf("w[%d][%d][%d] = %lf\n", i, j, k, w[i][j][k]);
-                    }
+        fclose(fp);
+
+        //学習後のパラメータを出力するファイルを開く
+        fp = fopen("w_batch.csv", "w");
+        if( fp == NULL ){
+            printf( "ファイルが開けません\n");
+            return -1;
+        }
+
+        for(i = 0; i <= nn_param.hidden_layer_size; i++) {
+            for(j = 0; j <= size[i]; j++) {
+                for(k = 0; k <= size[i+1]; k++) {
+                    fprintf(fp, "%d,%d,%d,%lf\n", i, j, k, w[i][j][k]);
                 }
-            }*/
+            }
+        }
+
+        fclose(fp);
+
+          if(fabs(Loss_batch) < LOSS_MIN){
+            printf("損失の大きさが一定値を下回りました。\n");
+            printf("損失の大きさ : %lf\n", Loss_batch);
             printf("繰り返し回数は%d\n", batch_count);
-        }else if(seq_count > N){
+        }else if(batch_count >= N){
             printf("繰り返し回数が一定数を超えました。\n");
-            //printf("パラメータの値は%.4lf\n", a);
+            printf("損失の大きさ : %lf\n", Loss_batch);
             printf("繰り返し回数は%d\n", batch_count);
           }else{
-            //printf("その時のパラメータの値は%.4lf\n", a);
-            printf("繰り返し回数は%d\n", seq_count);
+            printf("損失の大きさ : %lf\n", Loss_batch);
+            printf("繰り返し回数は%d\n", batch_count);
           }
           printf("**************************************************\n");
           break;
@@ -356,11 +380,11 @@ int main(void){
         /**************************逐次学習*************************************/
         printf("学習率を入力してください：\n");
         scanf("%lf", &epsilon);
-        printf("\n");
+        printf("**************************************************\n");
 
         printf("逐次学習の処理を始めます．\n");
         //損失関数を出力するファイルを開く
-        fp = fopen("loss.csv", "w");
+        fp = fopen("loss_seq.csv", "w");
         if( fp == NULL ){
             printf( "ファイルが開けません\n");
             return -1;
@@ -382,7 +406,7 @@ int main(void){
                 backward(nn_param, w, size, layer_in, layer_out, out[i], t[i], dE_dw, dE_dw_t, dE_da);
                 //printf("逆伝搬: %d回 OK\n", i);
                 //重みの更新
-                update_w(nn_param, epsilon, w, size, dE_dw_t);
+                update_w(nn_param, epsilon, w, size, dE_dw);
                 //printf("更新: %d回 OK\n", i);
                 /*
                 for(int l = 0; l <= nn_param.hidden_layer_size; l++) {
@@ -399,7 +423,7 @@ int main(void){
             //カウント
             seq_count++;
 
-            if(seq_count % 1000 == 0){
+            if(seq_count % 100 == 0){
                 printf("seq_count = %d : %lf\n", seq_count, Loss_seq);
             }
 
@@ -408,32 +432,103 @@ int main(void){
 
         fclose(fp);
 
-          if(fabs(Loss_seq) < LOSS_MIN){
-            printf("勾配の大きさが一定値を下回りました。\n");
-            /*
-            for(i = 0; i <= nn_param.hidden_layer_size; i++) {
-                for(j = 0; j <= size[i]; j++) {
-                    for(k = 0; k <= size[i+1]; k++) {
-                        printf("w[%d][%d][%d] = %lf\n", i, j, k, w[i][j][k]);
-                    }
+        //学習後のパラメータを出力するファイルを開く
+        fp = fopen("w_seq.csv", "w");
+        if( fp == NULL ){
+            printf( "ファイルが開けません\n");
+            return -1;
+        }
+
+        for(i = 0; i <= nn_param.hidden_layer_size; i++) {
+            for(j = 0; j <= size[i]; j++) {
+                for(k = 0; k <= size[i+1]; k++) {
+                    fprintf(fp, "%d,%d,%d,%lf\n", i, j, k, w[i][j][k]);
                 }
-            }*/
+            }
+        }
+
+        fclose(fp);
+
+          if(fabs(Loss_seq) < LOSS_MIN){
+            printf("損失の大きさが一定値を下回りました。\n");
+            printf("損失の大きさ : %lf\n", Loss_seq);
             printf("繰り返し回数は%d\n", seq_count);
         }else if(seq_count > N){
             printf("繰り返し回数が一定数を超えました。\n");
-            //printf("パラメータの値は%.4lf\n", a);
+            printf("損失の大きさ : %lf\n", Loss_seq);
             printf("繰り返し回数は%d\n", seq_count);
           }else{
-            //printf("その時のパラメータの値は%.4lf\n", a);
+            printf("損失の大きさ : %lf\n", Loss_seq);
             printf("繰り返し回数は%d\n", seq_count);
           }
           printf("**************************************************\n");
           break;
 
         case 'c':
+        //未学習データ
+        //ファイルオープン
+    	if ((fp = fopen("unlearn_data.txt", "r")) == NULL) {
+            printf("ファイルを開けませんでした．\n");
+            return -1;
+    	}
+    	//データ読み込み
+        printf("未学習データ\n");
+        i = 0;
+    	while ((fscanf(fp, "%lf %lf %lf", &unlearn_data[i][1], &unlearn_data[i][2], &unlearn_data[i][3])) != EOF) {
+    		printf("%.1lf %.1lf %.1lf\n", unlearn_data[i][1], unlearn_data[i][2], unlearn_data[i][3]);
+    		i++;
+    	}
+        printf("\n");
+        fclose(fp);
+
+        for(i = 0; i < unlearn_num; i++){
+            forward(nn_param, unlearn_data[i], w, size, layer_in, layer_out, out[i]);
+        }
+
+        printf("未学習データの出力\n");
+        for(i = 0; i < unlearn_num; i++){
+            printf("%d : %lf\n", i,out[i][1]);
+        }
 
          printf("**************************************************\n");
          break;
+
+        case 'd':
+            printf("パラメータ（重み，バイアス）をリセットします\n\n");
+
+            srand((unsigned int)time(NULL));
+
+            for(i = 0; i <= nn_param.hidden_layer_size; i++) {
+                for(j = 0; j <= size[i]; j++) {
+                    for(k = 0; k <= size[i+1]; k++) {
+                        w[i][j][k] = ((double)rand()/RAND_MAX) * 2 - 1;  //乱数でaを初期化
+                    }
+                }
+            }
+
+            //学習前のパラメータを出力するファイルを開く
+            fp = fopen("w.csv", "w");
+            if( fp == NULL ){
+                printf( "ファイルが開けません\n");
+                return -1;
+            }
+
+            for(i = 0; i <= nn_param.hidden_layer_size; i++) {
+                for(j = 0; j <= size[i]; j++) {
+                    for(k = 0; k <= size[i+1]; k++) {
+                        printf("w[%d][%d][%d] = %lf\n", i, j, k, w[i][j][k]);
+                        fprintf(fp, "%d,%d,%d,%lf\n", i, j, k, w[i][j][k]);
+                    }
+                }
+            }
+            printf("\n");
+
+            fclose(fp);
+
+            printf("パラメータのリセットが完了しました．\n");
+
+            printf("**************************************************\n");
+            break;
 
         case 0x1b:
             printf("プログラムを終了します.\n");
